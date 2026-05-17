@@ -1,0 +1,14 @@
+{
+	"@metadata": { "authors": [] },
+	"favorites-desc": "Permite a los usuarios guardar páginas en una lista de favoritos",
+	"favorites": "Mis favoritos",
+	"favorites-add": "❤ Añadir a favoritos",
+	"favorites-remove": "💙 Quitar de favoritos",
+	"favorites-added": "$1 ha sido añadido a tus favoritos.",
+	"favorites-removed": "$1 ha sido eliminado de tus favoritos.",
+	"favorites-error": "Error al actualizar favoritos",
+	"favorites-personal-link": "Mis favoritos",
+	"favorites-empty": "Tu lista de favoritos está vacía. Visita cualquier página y haz clic en «Añadir a favoritos» para guardarla.",
+	"favorites-page-title": "Mis favoritos",
+	"special-favorites": "Favoritos"
+}

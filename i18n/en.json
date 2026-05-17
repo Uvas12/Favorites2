@@ -1,0 +1,14 @@
+{
+	"@metadata": { "authors": [] },
+	"favorites-desc": "Allows users to save pages in a favorites list",
+	"favorites": "My favorites",
+	"favorites-add": "❤ Add to favorites",
+	"favorites-remove": "💙 Remove from favorites",
+	"favorites-added": "$1 has been added to your favorites.",
+	"favorites-removed": "$1 has been removed from your favorites.",
+	"favorites-error": "Error updating favorites",
+	"favorites-personal-link": "My favorites",
+	"favorites-empty": "Your favorites list is empty.",
+	"favorites-page-title": "My favorites",
+	"special-favorites": "Favorites"
+}

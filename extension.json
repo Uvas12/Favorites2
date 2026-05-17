@@ -1,0 +1,69 @@
+{
+	"name": "Favorites2",
+	"version": "2.0.0",
+	"author": [ "La pluma azul" ],
+	"url": "https://www.mediawiki.org/wiki/Extension:Favorites2",
+	"descriptionmsg": "favorites-desc",
+	"license-name": "GPL-2.0-or-later",
+	"type": "specialpage",
+	"requires": {
+		"MediaWiki": ">= 1.45.0"
+	},
+	"config": {
+		"UseIconFavorite": {
+			"description": "Use heart icon (true) or tab (false)",
+			"public": true,
+			"value": true
+		},
+		"FavoritesPersonalURL": {
+			"description": "Show personal link to favorites in user menu",
+			"public": true,
+			"value": true
+		}
+	},
+	"Actions": {
+		"addfavorite": "AddFavoriteAction",
+		"removefavorite": "RemoveFavoriteAction"
+	},
+	"Hooks": {
+		"BeforePageDisplay": "FavoritesHooks::onBeforePageDisplay",
+		"SkinTemplateNavigation::Universal": "FavoritesHooks::onSkinTemplateNavigation",
+		"LoadExtensionSchemaUpdates": "FavoritesHooks::onLoadExtensionSchemaUpdates"
+	},
+	"SpecialPages": {
+		"Favorites": "SpecialFavorites"
+	},
+	"APIModules": {
+		"addfavorite": "ApiFavorites",
+		"removefavorite": "ApiFavorites",
+		"favorites": "ApiFavorites"
+	},
+	"AutoloadClasses": {
+		"FavoritesHooks": "includes/FavoritesHooks.php",
+		"SpecialFavorites": "includes/SpecialFavorites.php",
+		"FavoritesDB": "includes/FavoritesDB.php",
+		"ApiFavorites": "includes/FavoritesApi.php",
+		"AddFavoriteAction": "includes/AddFavoriteAction.php",
+		"RemoveFavoriteAction": "includes/RemoveFavoriteAction.php"
+	},
+	"MessagesDirs": {
+		"Favorites": [ "i18n" ]
+	},
+	"ResourceModules": {
+		"ext.favorites": {
+			"scripts": [ "resources/js/favorites.js" ],
+			"styles":  [ "resources/css/favorites.css" ],
+			"dependencies": [ "mediawiki.api", "mediawiki.notification", "mediawiki.util" ],
+			"messages": [
+				"favorites-add",
+				"favorites-remove",
+				"favorites-added",
+				"favorites-removed",
+				"favorites-error"
+			],
+			"localBasePath": "",
+			"remoteExtPath": "Favorites2"
+		}
+	},
+	"manifest_version": 2
+}

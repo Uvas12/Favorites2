@@ -1,0 +1,112 @@
+/* =============================================
+   Favorites Extension - CSS
+   ============================================= */
+
+/* ---- Li del corazón: mismo estilo que #ca-watch ---- */
+.mw-favorite-heart-li {
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	margin: 0;
+	padding: 0;
+}
+
+/* ---- Imagen del corazón ---- */
+.mw-favorite-heart-img {
+	width: 18px;
+	height: 18px;
+	display: block;
+	/* Bajar el corazón para igualarlo con la estrella */
+	padding: 0.65em 0.55em 0.35em;
+	box-sizing: content-box;
+	vertical-align: middle;
+	cursor: pointer;
+	transition: transform 0.15s ease, opacity 0.15s;
+	opacity: 0.85;
+}
+
+.mw-favorite-heart-li:hover .mw-favorite-heart-img {
+	opacity: 1;
+	transform: scale( 1.1 );
+}
+
+/* ---- Animación pop del corazón principal ---- */
+@keyframes heartPop {
+	0%   { transform: scale( 1 ); }
+	20%  { transform: scale( 1.6 ); }
+	50%  { transform: scale( 0.8 ); }
+	75%  { transform: scale( 1.25 ); }
+	100% { transform: scale( 1 ); }
+}
+
+.mw-favorite-heart-img.fav-animate {
+	animation: heartPop 0.55s cubic-bezier( 0.36, 0.07, 0.19, 0.97 ) forwards;
+}
+
+/* ---- Corazoncitos voladores (creados por JS) ---- */
+.fav-burst-heart {
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+/* ---- Modo pestaña texto ---- */
+.mw-favorite-tab { cursor: pointer; }
+
+/* ---- Enlace personal en menú ---- */
+li.mw-favorites-personal-link a::before {
+	content: '♥ ';
+	color: #e74c3c;
+	font-size: 0.9em;
+}
+
+/* =============================================
+   Página especial - Mis favoritos
+   ============================================= */
+.mw-favorites-page {
+	max-width: 750px;
+	margin: 1.5em auto;
+}
+.mw-favorites-empty {
+	text-align: center;
+	color: #555;
+	font-style: italic;
+	padding: 2em 0;
+	font-size: 1.05em;
+}
+.mw-favorites-namespace-section { margin-bottom: 1.5em; }
+.mw-favorites-namespace-header {
+	text-align: center;
+	font-size: 1.15em;
+	font-weight: bold;
+	padding: 6px 0 4px;
+	border-bottom: 2px solid #c0c0c0;
+	margin: 1.2em 0 0.6em;
+	color: #333;
+}
+.mw-favorites-list-ul { list-style: none; padding: 0; margin: 0; }
+.mw-favorites-list-ul li {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 7px 10px;
+	border-bottom: 1px solid #f0f0f0;
+	transition: background 0.15s;
+}
+.mw-favorites-list-ul li:hover { background: #fafafa; }
+.mw-favorites-list-ul li:last-child { border-bottom: none; }
+.mw-favorites-page-link { flex: 1; }
+.mw-favorites-actions {
+	font-size: 0.85em;
+	color: #888;
+	margin-left: 12px;
+	white-space: nowrap;
+}
+.mw-favorites-remove-btn {
+	color: #3366cc !important;
+	cursor: pointer;
+	padding: 2px 7px;
+	border-radius: 3px;
+	text-decoration: none !important;
+	transition: background 0.2s;
+}
+.mw-favorites-remove-btn:hover { background: #ddeeff; }
