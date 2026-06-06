@@ -31,9 +31,6 @@ class FavoritesHooks {
 
         /*
          * Pass initial favorite state to JavaScript.
-         *
-         * This avoids an extra AJAX request just to know whether the
-         * current page is already marked as favorite.
          */
         if ( !$title->isSpecialPage() ) {
             $pageId = $title->getArticleID();
@@ -111,12 +108,6 @@ class FavoritesHooks {
             $class .= ' mw-favorite-icon';
         }
 
-        /*
-         * In icon mode, render a simple heart immediately from PHP.
-         * JavaScript can later replace/enhance it if needed.
-         *
-         * In text mode, render the normal message.
-         */
         $favoriteLink = [
             'text' => $useIcon ? ( $isFav ? '♥' : '♡' ) : $skin->msg( $msgKey )->text(),
             'href' => $title->getFullURL( [ 'action' => $action ] ),
@@ -146,8 +137,6 @@ class FavoritesHooks {
             /*
              * Text mode:
              * Put Favorites2 in the "More" menu.
-             *
-             * This matches the expected behavior when the icon mode is disabled.
              */
             if ( !isset( $links['actions'] ) || !is_array( $links['actions'] ) ) {
                 $links['actions'] = [];
@@ -162,6 +151,88 @@ class FavoritesHooks {
             'favorites',
             dirname( __DIR__ ) . '/sql/favorites.sql'
         );
+    }
+
+    /**
+     * Clean favorite records when MediaWiki performs an action.
+     *
+     * DeletePagesForGood uses the custom action:
+     *
+     * action=delete_page_permanently
+     *
+     * That action may bypass MediaWiki's normal PageDeleteComplete hook.
+     * Therefore, Favorites2 cleans the page's favorite records when that
+     * custom action is detected.
+     *
+     * @param OutputPage $output
+     * @param Article $article
+     * @param Title $title
+     * @param User $user
+     * @param WebRequest $request
+     * @param mixed $wiki
+     * @return bool
+     */
+    public static function onMediaWikiPerformAction(
+        $output,
+        $article,
+        $title,
+        $user,
+        $request,
+        $wiki
+    ): bool {
+        if ( !$title ) {
+            return true;
+        }
+
+        $action = $request->getVal( 'action', 'view' );
+
+        if ( $action !== 'delete_page_permanently' ) {
+            return true;
+        }
+
+        $pageId = $title->getArticleID();
+
+        if ( $pageId <= 0 ) {
+            return true;
+        }
+
+        /*
+         * DeletePagesForGood may delete the page without firing PageDeleteComplete.
+         * Clean Favorites2 records before the page row disappears.
+         */
+        FavoritesDB::removeAllFavoritesForPage( $pageId );
+
+        return true;
+    }
+
+    /**
+     * Remove favorite records when a page is deleted normally by MediaWiki.
+     *
+     * This prevents orphaned favorite records for regular page deletions.
+     *
+     * @param mixed $page Deleted WikiPage/Page object, depending on MediaWiki version.
+     * @param mixed $deleter User/UserIdentity who deleted the page.
+     * @param string $reason Deletion reason.
+     * @param int $pageID Deleted page ID.
+     * @param mixed $deletedRev Deleted revision record.
+     * @param mixed $logEntry Log entry.
+     * @param int $archivedRevisionCount Number of archived revisions.
+     * @return void
+     */
+    public static function onPageDeleteComplete(
+        $page,
+        $deleter,
+        string $reason,
+        int $pageID,
+        $deletedRev,
+        $logEntry,
+        int $archivedRevisionCount
+    ): void {
+        if ( $pageID <= 0 ) {
+            return;
+        }
+
+        FavoritesDB::removeAllFavoritesForPage( $pageID );
     }
 
     /**
@@ -239,6 +310,48 @@ class FavoritesHooks {
                     unset( $links[$section][$key] );
                 }
             }
+        }
+    }
+    
+    /**
+     * Handle page moves.
+     *
+     * Favorites2 stores favorites by page ID, so when a page is moved,
+     * the favorite normally remains valid because the moved page keeps
+     * the same page ID.
+     *
+     * If MediaWiki creates a redirect at the old title, $redirid contains
+     * the page ID of that redirect. Favorites2 removes favorites pointing
+     * to the redirect page ID, so users keep the moved page as favorite
+     * instead of the old redirect.
+     *
+     * @param MediaWiki\Linker\LinkTarget $old Old title.
+     * @param MediaWiki\Linker\LinkTarget $new New title.
+     * @param MediaWiki\User\UserIdentity $user User who moved the page.
+     * @param int $pageid Page ID of the moved page.
+     * @param int $redirid Page ID of the created redirect.
+     * @param string $reason Move reason.
+     * @param MediaWiki\Revision\RevisionRecord $revision Revision created by the move.
+     * @return void
+     */
+    public static function onPageMoveComplete(
+        $old,
+        $new,
+        $user,
+        int $pageid,
+        int $redirid,
+        string $reason,
+        $revision
+    ): void {
+        /*
+         * The moved page keeps $pageid, so no update is needed for favorites
+         * pointing to the actual page.
+         *
+         * If a redirect was created at the old title, remove favorites pointing
+         * to that redirect page ID.
+         */
+        if ( $redirid > 0 ) {
+            FavoritesDB::removeAllFavoritesForPage( $redirid );
         }
     }
 

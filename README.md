@@ -15,7 +15,7 @@ Permite a los usuarios guardar páginas favoritas con un corazón animado ❤️
 
 3. Añade a tu `LocalSettings.php`:
    ```php
-   wfLoadExtension( 'Favorites2' );
+   wfLoadExtension( 'Favorites2'' );
    ```
 
 4. Configuración opcional en `LocalSettings.php`:

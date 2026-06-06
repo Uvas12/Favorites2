@@ -7,78 +7,125 @@ use MediaWiki\Title\Title;
 
 class SpecialFavorites extends SpecialPage {
 
-	public function __construct() {
-		// Sin permiso especial → visible para todos en Special:SpecialPages
-		parent::__construct( 'Favorites' );
-	}
+    public function __construct() {
+        // Sin permiso especial → visible para todos en Special:SpecialPages
+        parent::__construct( 'Favorites' );
+    }
 
-	public function execute( $par ): void {
-		$user = $this->getUser();
-		if ( !$user->isRegistered() ) {
-			$this->requireLogin();
-			return;
-		}
+    public function execute( $par ): void {
+        $user = $this->getUser();
 
-		$this->setHeaders();
-		$out = $this->getOutput();
-		$out->setPageTitle( $this->msg( 'favorites-page-title' )->text() );
-		$out->addModules( 'ext.favorites' );
+        if ( !$user->isRegistered() ) {
+            $this->requireLogin();
+            return;
+        }
 
-		$grouped = FavoritesDB::getFavoritesGrouped( $user );
+        $this->setHeaders();
 
-		if ( empty( $grouped ) ) {
-			$out->addHTML( Html::element( 'p', [ 'class' => 'mw-favorites-empty' ],
-				$this->msg( 'favorites-empty' )->text() ) );
-			return;
-		}
+        $out = $this->getOutput();
+        $out->setPageTitle( $this->msg( 'favorites-page-title' )->text() );
+        $out->addModules( 'ext.favorites' );
 
-		$nsNames = $this->getLanguage()->getNamespaces();
-		$html    = Html::openElement( 'div', [ 'class' => 'mw-favorites-page' ] );
+        /*
+         * Limpia registros huérfanos antes de mostrar la lista.
+         *
+         * Esto cubre páginas eliminadas permanentemente por extensiones como
+         * DeletePagesForGood, que pueden borrar la página sin disparar
+         * PageDeleteComplete.
+         */
+        FavoritesDB::purgeOrphanFavorites();
 
-		foreach ( $grouped as $nsId => $pages ) {
-			$nsLabel = ( $nsId === NS_MAIN )
-				? $this->msg( 'blanknamespace' )->text()
-				: str_replace( '_', ' ', $nsNames[ $nsId ] ?? "Namespace $nsId" );
+        $grouped = FavoritesDB::getFavoritesGrouped( $user );
 
-			$html .= Html::openElement( 'div', [ 'class' => 'mw-favorites-namespace-section' ] );
-			$html .= Html::element( 'h3', [ 'class' => 'mw-favorites-namespace-header' ], $nsLabel );
-			$html .= Html::openElement( 'ul', [ 'class' => 'mw-favorites-list-ul' ] );
+        if ( empty( $grouped ) ) {
+            $out->addHTML(
+                Html::element(
+                    'p',
+                    [ 'class' => 'mw-favorites-empty' ],
+                    $this->msg( 'favorites-empty' )->text()
+                )
+            );
 
-			foreach ( $pages as $page ) {
-				$title      = Title::makeTitle( $page['page_namespace'], $page['page_title'] );
-				$pageLink   = $this->getLinkRenderer()->makeLink( $title );
-				$editLink   = $this->getLinkRenderer()->makeLink(
-					$title, $this->msg( 'editlink' )->text(), [], [ 'action' => 'edit' ]
-				);
-				$removeLink = Html::element( 'a', [
-					'href'           => '#',
-					'class'          => 'mw-favorites-remove-btn',
-					'data-page-id'   => $page['page_id'],
-					'data-page-name' => str_replace( '_', ' ', $page['page_title'] ),
-				], $this->msg( 'favorites-remove' )->text() );
+            return;
+        }
 
-				$html .= Html::openElement( 'li' );
-				$html .= Html::rawElement( 'span', [ 'class' => 'mw-favorites-page-link' ], $pageLink );
-				$html .= Html::rawElement( 'span', [ 'class' => 'mw-favorites-actions' ],
-					'(' . $editLink . ' | ' . $removeLink . ')' );
-				$html .= Html::closeElement( 'li' );
-			}
+        $nsNames = $this->getLanguage()->getNamespaces();
+        $html = Html::openElement( 'div', [ 'class' => 'mw-favorites-page' ] );
 
-			$html .= Html::closeElement( 'ul' );
-			$html .= Html::closeElement( 'div' );
-		}
+        foreach ( $grouped as $nsId => $pages ) {
+            $nsLabel = ( $nsId === NS_MAIN )
+                ? $this->msg( 'blanknamespace' )->text()
+                : str_replace( '_', ' ', $nsNames[$nsId] ?? "Namespace $nsId" );
 
-		$html .= Html::closeElement( 'div' );
-		$out->addHTML( $html );
-	}
+            $html .= Html::openElement( 'div', [ 'class' => 'mw-favorites-namespace-section' ] );
+            $html .= Html::element( 'h3', [ 'class' => 'mw-favorites-namespace-header' ], $nsLabel );
+            $html .= Html::openElement( 'ul', [ 'class' => 'mw-favorites-list-ul' ] );
 
-	/** Aparecer en Special:SpecialPages */
-	public function isListed(): bool {
-		return true;
-	}
+            foreach ( $pages as $page ) {
+                $title = Title::makeTitle( $page['page_namespace'], $page['page_title'] );
 
-	/** Sección "Otras páginas especiales" — grupo que siempre existe en MW */
-	protected function getGroupName(): string {
-		return 'other';
-	}
+                if ( !$title ) {
+                    continue;
+                }
+
+                $pageLink = $this->getLinkRenderer()->makeLink( $title );
+
+                $editLink = $this->getLinkRenderer()->makeLink(
+                    $title,
+                    $this->msg( 'editlink' )->text(),
+                    [],
+                    [ 'action' => 'edit' ]
+                );
+
+                $removeLink = Html::element(
+                    'a',
+                    [
+                        'href' => '#',
+                        'class' => 'mw-favorites-remove-btn',
+                        'data-page-id' => (string)$page['page_id'],
+                        'data-page-name' => str_replace( '_', ' ', $page['page_title'] ),
+                    ],
+                    $this->msg( 'favorites-remove' )->text()
+                );
+
+                $html .= Html::openElement( 'li' );
+                $html .= Html::rawElement(
+                    'span',
+                    [ 'class' => 'mw-favorites-page-link' ],
+                    $pageLink
+                );
+                $html .= Html::rawElement(
+                    'span',
+                    [ 'class' => 'mw-favorites-actions' ],
+                    '(' . $editLink . ' | ' . $removeLink . ')'
+                );
+                $html .= Html::closeElement( 'li' );
+            }
+
+            $html .= Html::closeElement( 'ul' );
+            $html .= Html::closeElement( 'div' );
+        }
+
+        $html .= Html::closeElement( 'div' );
+
+        $out->addHTML( $html );
+    }
+
+    /**
+     * Aparecer en Special:SpecialPages.
+     *
+     * @return bool
+     */
+    public function isListed(): bool {
+        return true;
+    }
+
+    /**
+     * Sección "Otras páginas especiales".
+     *
+     * @return string
+     */
+    protected function getGroupName(): string {
+        return 'other';
+    }
 }

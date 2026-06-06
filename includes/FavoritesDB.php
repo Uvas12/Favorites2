@@ -1,174 +1,211 @@
 <?php
-/**
- * Database operations for Favorites2 extension
- *
- * @file
- * @license GPL-2.0-or-later
- */
-
 declare( strict_types = 1 );
 
 use MediaWiki\MediaWikiServices;
-use MediaWiki\User\UserIdentity;
 
 class FavoritesDB {
 
-	/**
-	 * Add a page to user's favorites
-	 *
-	 * @param UserIdentity $user
-	 * @param int $pageId
-	 * @return bool
-	 */
-	public static function addFavorite( UserIdentity $user, int $pageId ): bool {
-		$dbw = MediaWikiServices::getInstance()->getConnectionProvider()->getPrimaryDatabase();
+    /**
+     * Check if a page is already in the user's favorites.
+     *
+     * @param User $user
+     * @param int $pageId
+     * @return bool
+     */
+    public static function isFavorite( $user, int $pageId ): bool {
+        if ( !$user || !$user->isRegistered() || $pageId <= 0 ) {
+            return false;
+        }
 
-		// Check if already exists
-		$exists = $dbw->selectRow(
-			'favorites',
-			'1',
-			[
-				'favorite_user_id' => $user->getId(),
-				'favorite_page_id' => $pageId
-			]
-		);
+        $dbr = MediaWikiServices::getInstance()
+            ->getDBLoadBalancer()
+            ->getConnection( DB_REPLICA );
 
-		if ( $exists ) {
-			return false;
-		}
+        $row = $dbr->newSelectQueryBuilder()
+            ->select( 'favorite_id' )
+            ->from( 'favorites' )
+            ->where( [
+                'favorite_user_id' => $user->getId(),
+                'favorite_page_id' => $pageId
+            ] )
+            ->caller( __METHOD__ )
+            ->fetchRow();
 
-		// Insert new favorite
-		$dbw->insert(
-			'favorites',
-			[
-				'favorite_user_id' => $user->getId(),
-				'favorite_page_id' => $pageId,
-				'favorite_timestamp' => $dbw->timestamp()
-			]
-		);
+        return (bool)$row;
+    }
 
-		return $dbw->affectedRows() > 0;
-	}
+    /**
+     * Add a page to the user's favorites.
+     *
+     * @param User $user
+     * @param int $pageId
+     * @return bool
+     */
+    public static function addFavorite( $user, int $pageId ): bool {
+        if ( !$user || !$user->isRegistered() || $pageId <= 0 ) {
+            return false;
+        }
 
-	/**
-	 * Remove a page from user's favorites
-	 *
-	 * @param UserIdentity $user
-	 * @param int $pageId
-	 * @return bool
-	 */
-	public static function removeFavorite( UserIdentity $user, int $pageId ): bool {
-		$dbw = MediaWikiServices::getInstance()->getConnectionProvider()->getPrimaryDatabase();
+        if ( self::isFavorite( $user, $pageId ) ) {
+            return true;
+        }
 
-		$dbw->delete(
-			'favorites',
-			[
-				'favorite_user_id' => $user->getId(),
-				'favorite_page_id' => $pageId
-			]
-		);
+        $dbw = MediaWikiServices::getInstance()
+            ->getDBLoadBalancer()
+            ->getConnection( DB_PRIMARY );
 
-		return $dbw->affectedRows() > 0;
-	}
+        $dbw->newInsertQueryBuilder()
+            ->insertInto( 'favorites' )
+            ->row( [
+                'favorite_user_id' => $user->getId(),
+                'favorite_page_id' => $pageId,
+                'favorite_timestamp' => $dbw->timestamp()
+            ] )
+            ->caller( __METHOD__ )
+            ->execute();
 
-	/**
-	 * Check if a page is in user's favorites
-	 *
-	 * @param UserIdentity $user
-	 * @param int $pageId
-	 * @return bool
-	 */
-	public static function isFavorite( UserIdentity $user, int $pageId ): bool {
-		$dbr = MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
+        return true;
+    }
 
-		$result = $dbr->selectRow(
-			'favorites',
-			'1',
-			[
-				'favorite_user_id' => $user->getId(),
-				'favorite_page_id' => $pageId
-			]
-		);
+    /**
+     * Remove a page from the user's favorites.
+     *
+     * @param User $user
+     * @param int $pageId
+     * @return bool
+     */
+    public static function removeFavorite( $user, int $pageId ): bool {
+        if ( !$user || !$user->isRegistered() || $pageId <= 0 ) {
+            return false;
+        }
 
-		return $result !== false;
-	}
+        $dbw = MediaWikiServices::getInstance()
+            ->getDBLoadBalancer()
+            ->getConnection( DB_PRIMARY );
 
-	/**
-	 * Get all user's favorites
-	 *
-	 * @param UserIdentity $user
-	 * @return array Array of [ 'page_id' => id, 'page_title' => title, 'page_namespace' => ns ]
-	 */
-	public static function getFavorites( UserIdentity $user ): array {
-		$dbr = MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
+        $dbw->newDeleteQueryBuilder()
+            ->deleteFrom( 'favorites' )
+            ->where( [
+                'favorite_user_id' => $user->getId(),
+                'favorite_page_id' => $pageId
+            ] )
+            ->caller( __METHOD__ )
+            ->execute();
 
-		$result = $dbr->select(
-			[ 'favorites', 'page' ],
-			[ 'page_id', 'page_title', 'page_namespace' ],
-			[ 'favorite_user_id' => $user->getId() ],
-			__METHOD__,
-			[ 'ORDER BY' => 'favorite_timestamp DESC' ],
-			[ 'page' => [ 'INNER JOIN', 'favorite_page_id = page_id' ] ]
-		);
+        return true;
+    }
 
-		$favorites = [];
-		foreach ( $result as $row ) {
-			$favorites[] = [
-				'page_id' => (int)$row->page_id,
-				'page_title' => $row->page_title,
-				'page_namespace' => (int)$row->page_namespace,
-			];
-		}
+    /**
+     * Remove all favorite records associated with a page.
+     *
+     * Used by:
+     * - PageDeleteComplete for normal MediaWiki page deletions.
+     * - MediaWikiPerformAction for DeletePagesForGood permanent deletions.
+     *
+     * @param int $pageId
+     * @return void
+     */
+    public static function removeAllFavoritesForPage( int $pageId ): void {
+        if ( $pageId <= 0 ) {
+            return;
+        }
 
-		return $favorites;
-	}
+        $dbw = MediaWikiServices::getInstance()
+            ->getDBLoadBalancer()
+            ->getConnection( DB_PRIMARY );
 
-	/**
-	 * Get favorites organized by namespace and alphabetically
-	 *
-	 * @param UserIdentity $user
-	 * @return array[ namespace => [ title => [...] ] ]
-	 */
-	public static function getFavoritesGrouped( UserIdentity $user ): array {
-		$favorites = self::getFavorites( $user );
-		$grouped = [];
+        $dbw->newDeleteQueryBuilder()
+            ->deleteFrom( 'favorites' )
+            ->where( [
+                'favorite_page_id' => $pageId
+            ] )
+            ->caller( __METHOD__ )
+            ->execute();
+    }
 
-		foreach ( $favorites as $fav ) {
-			$ns = $fav['page_namespace'];
-			if ( !isset( $grouped[$ns] ) ) {
-				$grouped[$ns] = [];
-			}
-			$grouped[$ns][] = $fav;
-		}
+    /**
+     * Remove orphan favorite records.
+     *
+     * This deletes favorites whose favorite_page_id no longer exists
+     * in the page table.
+     *
+     * Useful for pages permanently deleted by extensions that may bypass
+     * MediaWiki's normal PageDeleteComplete hook.
+     *
+     * @return void
+     */
+    public static function purgeOrphanFavorites(): void {
+        $dbw = MediaWikiServices::getInstance()
+            ->getDBLoadBalancer()
+            ->getConnection( DB_PRIMARY );
 
-		// Sort each namespace alphabetically
-		foreach ( $grouped as &$items ) {
-			usort( $items, function( $a, $b ) {
-				return strcasecmp( $a['page_title'], $b['page_title'] );
-			} );
-		}
+        $favoritesTable = $dbw->tableName( 'favorites' );
+        $pageTable = $dbw->tableName( 'page' );
 
-		// Sort namespaces
-		ksort( $grouped );
+        $dbw->query(
+            "DELETE f
+            FROM $favoritesTable f
+            LEFT JOIN $pageTable p ON p.page_id = f.favorite_page_id
+            WHERE p.page_id IS NULL",
+            __METHOD__
+        );
+    }
 
-		return $grouped;
-	}
+    /**
+     * Get the user's favorites grouped by namespace.
+     *
+     * Used by Special:Favorites.
+     *
+     * @param User $user
+     * @return array
+     */
+    public static function getFavoritesGrouped( $user ): array {
+        if ( !$user || !$user->isRegistered() ) {
+            return [];
+        }
 
-	/**
-	 * Get count of user's favorites
-	 *
-	 * @param UserIdentity $user
-	 * @return int
-	 */
-	public static function getFavoriteCount( UserIdentity $user ): int {
-		$dbr = MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
+        $dbr = MediaWikiServices::getInstance()
+            ->getDBLoadBalancer()
+            ->getConnection( DB_REPLICA );
 
-		$count = $dbr->selectRowCount(
-			'favorites',
-			'*',
-			[ 'favorite_user_id' => $user->getId() ]
-		);
+        $res = $dbr->newSelectQueryBuilder()
+            ->select( [
+                'favorite_id',
+                'favorite_page_id',
+                'favorite_timestamp',
+                'page_namespace',
+                'page_title'
+            ] )
+            ->from( 'favorites' )
+            ->join( 'page', null, 'page_id = favorite_page_id' )
+            ->where( [
+                'favorite_user_id' => $user->getId()
+            ] )
+            ->orderBy( [
+                'page_namespace',
+                'page_title'
+            ] )
+            ->caller( __METHOD__ )
+            ->fetchResultSet();
 
-		return (int)$count;
-	}
+        $grouped = [];
+
+        foreach ( $res as $row ) {
+            $namespace = (int)$row->page_namespace;
+
+            if ( !isset( $grouped[$namespace] ) ) {
+                $grouped[$namespace] = [];
+            }
+
+            $grouped[$namespace][] = [
+                'favorite_id' => (int)$row->favorite_id,
+                'page_id' => (int)$row->favorite_page_id,
+                'favorite_timestamp' => $row->favorite_timestamp,
+                'page_namespace' => (int)$row->page_namespace,
+                'page_title' => $row->page_title
+            ];
+        }
+
+        return $grouped;
+    }
 }
