@@ -2,111 +2,290 @@
    Favorites Extension - CSS
    ============================================= */
 
-/* ---- Li del corazón: mismo estilo que #ca-watch ---- */
-.mw-favorite-heart-li {
-	display: flex;
-	align-items: center;
-	cursor: pointer;
-	margin: 0;
-	padding: 0;
+/* ---- Base del item de favoritos ---- */
+#ca-favorites2.mw-favorite-tab {
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
 }
 
-/* ---- Imagen del corazón ---- */
-.mw-favorite-heart-img {
-	width: 18px;
-	height: 18px;
-	display: block;
-	/* Bajar el corazón para igualarlo con la estrella */
-	padding: 0.65em 0.55em 0.35em;
-	box-sizing: content-box;
-	vertical-align: middle;
-	cursor: pointer;
-	transition: transform 0.15s ease, opacity 0.15s;
-	opacity: 0.85;
+/* =============================================
+   Modo icono en pestañas principales
+   ============================================= */
+
+/*
+ * Solo aplica cuando $wgUseIconFavorite = true.
+ * No afecta al modo texto dentro del menú "Más".
+ */
+#ca-favorites2.mw-favorite-icon,
+#ca-favorites2.mw-favorite-heart-li {
+    display: list-item;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
 }
 
-.mw-favorite-heart-li:hover .mw-favorite-heart-img {
-	opacity: 1;
-	transform: scale( 1.1 );
+#ca-favorites2.mw-favorite-icon a,
+#ca-favorites2.mw-favorite-heart-li a {
+    display: block;
+    box-sizing: border-box;
+    min-width: 42px;
+    padding-left: 0.7em;
+    padding-right: 0.7em;
+    text-align: center;
+    line-height: inherit;
 }
 
-/* ---- Animación pop del corazón principal ---- */
+/* Imagen del corazón en modo icono */
+#ca-favorites2.mw-favorite-icon .mw-favorite-heart-img,
+#ca-favorites2.mw-favorite-heart-li .mw-favorite-heart-img {
+    display: inline-block;
+    width: 19px;
+    height: 19px;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    vertical-align: middle;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: transform 0.15s ease, opacity 0.15s;
+}
+
+/* Hover del corazón */
+#ca-favorites2.mw-favorite-icon:hover .mw-favorite-heart-img,
+#ca-favorites2.mw-favorite-heart-li:hover .mw-favorite-heart-img {
+    opacity: 1;
+    transform: scale(1.08);
+}
+
+/* Animación pop del corazón principal */
 @keyframes heartPop {
-	0%   { transform: scale( 1 ); }
-	20%  { transform: scale( 1.6 ); }
-	50%  { transform: scale( 0.8 ); }
-	75%  { transform: scale( 1.25 ); }
-	100% { transform: scale( 1 ); }
+    0% {
+        transform: scale(1);
+    }
+
+    20% {
+        transform: scale(1.45);
+    }
+
+    50% {
+        transform: scale(0.85);
+    }
+
+    75% {
+        transform: scale(1.18);
+    }
+
+    100% {
+        transform: scale(1);
+    }
 }
 
-.mw-favorite-heart-img.fav-animate {
-	animation: heartPop 0.55s cubic-bezier( 0.36, 0.07, 0.19, 0.97 ) forwards;
+#ca-favorites2 .mw-favorite-heart-img.fav-animate {
+    animation: heartPop 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
 }
 
-/* ---- Corazoncitos voladores (creados por JS) ---- */
+/* Corazoncitos voladores creados por JS */
 .fav-burst-heart {
-	user-select: none;
-	-webkit-user-select: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-/* ---- Modo pestaña texto ---- */
-.mw-favorite-tab { cursor: pointer; }
+/* =============================================
+   Modo texto dentro del menú "Más"
+   ============================================= */
 
-/* ---- Enlace personal en menú ---- */
+/*
+ * Cuando $wgUseIconFavorite = false, Favorites2 está en actions,
+ * dentro del menú "Más".
+ *
+ * Aquí NO se fuerza tamaño, padding ni centrado.
+ * La opción debe heredar el estilo normal del menú de Vector.
+ */
+#ca-favorites2:not(.mw-favorite-icon):not(.mw-favorite-heart-li) {
+    text-align: left !important;
+}
+
+/*
+ * Reset solo de propiedades que podían venir del modo icono.
+ * No se toca color, tamaño ni padding para que Vector aplique su estilo normal.
+ */
+#ca-favorites2:not(.mw-favorite-icon):not(.mw-favorite-heart-li) a {
+    text-align: left !important;
+    min-width: 0 !important;
+    width: auto !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+    line-height: inherit !important;
+    color: inherit !important;
+    text-decoration: inherit;
+}
+
+/*
+ * No ocultamos ni modificamos corazones globales.
+ * Solo evitamos pseudo-elementos accidentales en el enlace de actions.
+ */
+#ca-favorites2:not(.mw-favorite-icon):not(.mw-favorite-heart-li) a::after {
+    content: none !important;
+    display: none !important;
+}
+
+/*
+ * Si por alguna razón el JS dejara una imagen del corazón en modo texto,
+ * se oculta para que el item se vea como una opción normal del menú.
+ */
+#ca-favorites2:not(.mw-favorite-icon):not(.mw-favorite-heart-li) .mw-favorite-heart-img {
+    display: none !important;
+}
+
+/* =============================================
+   Enlace personal en menú de usuario
+   ============================================= */
+
+/*
+ * Este corazón del enlace personal se mantiene.
+ * No afecta al item del menú "Más".
+ */
 li.mw-favorites-personal-link a::before {
-	content: '♥ ';
-	color: #e74c3c;
-	font-size: 0.9em;
+    content: '♥ ';
+    color: #e74c3c;
+    font-size: 0.9em;
 }
 
 /* =============================================
    Página especial - Mis favoritos
    ============================================= */
+
 .mw-favorites-page {
-	max-width: 750px;
-	margin: 1.5em auto;
+    max-width: 750px;
+    margin: 1.5em auto;
 }
+
 .mw-favorites-empty {
-	text-align: center;
-	color: #555;
-	font-style: italic;
-	padding: 2em 0;
-	font-size: 1.05em;
+    text-align: center;
+    color: #555;
+    font-style: italic;
+    padding: 2em 0;
+    font-size: 1.05em;
 }
-.mw-favorites-namespace-section { margin-bottom: 1.5em; }
+
+.mw-favorites-namespace-section {
+    margin-bottom: 1.5em;
+}
+
 .mw-favorites-namespace-header {
-	text-align: center;
-	font-size: 1.15em;
-	font-weight: bold;
-	padding: 6px 0 4px;
-	border-bottom: 2px solid #c0c0c0;
-	margin: 1.2em 0 0.6em;
-	color: #333;
+    text-align: center;
+    font-size: 1.15em;
+    font-weight: bold;
+    padding: 6px 0 4px;
+    border-bottom: 2px solid #c0c0c0;
+    margin: 1.2em 0 0.6em;
+    color: #333;
 }
-.mw-favorites-list-ul { list-style: none; padding: 0; margin: 0; }
+
+.mw-favorites-list-ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
 .mw-favorites-list-ul li {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 7px 10px;
-	border-bottom: 1px solid #f0f0f0;
-	transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.15s;
 }
-.mw-favorites-list-ul li:hover { background: #fafafa; }
-.mw-favorites-list-ul li:last-child { border-bottom: none; }
-.mw-favorites-page-link { flex: 1; }
+
+.mw-favorites-list-ul li:hover {
+    background: #fafafa;
+}
+
+.mw-favorites-list-ul li:last-child {
+    border-bottom: none;
+}
+
+.mw-favorites-page-link {
+    flex: 1;
+}
+
 .mw-favorites-actions {
-	font-size: 0.85em;
-	color: #888;
-	margin-left: 12px;
-	white-space: nowrap;
+    font-size: 0.85em;
+    color: #888;
+    margin-left: 12px;
+    white-space: nowrap;
 }
+
 .mw-favorites-remove-btn {
-	color: #3366cc !important;
-	cursor: pointer;
-	padding: 2px 7px;
-	border-radius: 3px;
-	text-decoration: none !important;
-	transition: background 0.2s;
+    color: #3366cc !important;
+    cursor: pointer;
+    padding: 2px 7px;
+    border-radius: 3px;
+    text-decoration: none !important;
+    transition: background 0.2s;
 }
-.mw-favorites-remove-btn:hover { background: #ddeeff; }
+
+.mw-favorites-remove-btn:hover {
+    background: #ddeeff;
+}
+
+/* =============================================
+   Favorites2 - Text mode inside Vector "More" menu
+   ============================================= */
+
+/*
+ * Cuando $wgUseIconFavorite = false, Favorites2 vive dentro del menú "Más".
+ * Debe verse como los demás items del menú, pero conservando el corazón.
+ */
+.vector-menu-content-list #ca-favorites2:not(.mw-favorite-icon),
+.vector-menu-content #ca-favorites2:not(.mw-favorite-icon) {
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: left !important;
+}
+
+/*
+ * Estilo similar a los enlaces normales del menú "Más".
+ */
+.vector-menu-content-list #ca-favorites2:not(.mw-favorite-icon) a,
+.vector-menu-content #ca-favorites2:not(.mw-favorite-icon) a {
+    display: block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+
+    text-align: left !important;
+    white-space: nowrap !important;
+
+    /* Tamaño un poco más pequeño para igualar el resto del menú */
+    color: #0645ad !important;
+    font-size: 13px !important;
+    font-weight: normal !important;
+    line-height: 1.55 !important;
+    text-decoration: none !important;
+
+    /* Padding del menú */
+    padding: 0.625em 1em !important;
+}
+
+/*
+ * Mantener el corazón, pero un poco más pequeño.
+ */
+.vector-menu-content-list #ca-favorites2:not(.mw-favorite-icon) a::before,
+.vector-menu-content #ca-favorites2:not(.mw-favorite-icon) a::before {
+    color: #0645ad !important;
+    font-size: 0.85em !important;
+    font-weight: normal !important;
+    line-height: inherit !important;
+    vertical-align: baseline !important;
+}
+
+/*
+ * Hover igual que los demás enlaces.
+ */
+.vector-menu-content-list #ca-favorites2:not(.mw-favorite-icon) a:hover,
+.vector-menu-content #ca-favorites2:not(.mw-favorite-icon) a:hover {
+    color: #0645ad !important;
+    text-decoration: underline !important;
+}
